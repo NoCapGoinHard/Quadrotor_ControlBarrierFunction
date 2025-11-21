@@ -24,7 +24,7 @@ J = [Ix 0 0; 0 Iy 0;0 0 Iz];
 global c0 c1 c2 c3
 c3 = 26;c2 = 253;c1 = 1092; c0 = 1764;
 
-%% Planning
+%% Planning (simulation length from 0 to n seconds)
 
 Tspan = [0 21];
 

@@ -18,7 +18,7 @@ drpy = [p+sphi*ttheta*q+cphi*ttheta*r;
         sphi/ctheta*q+cphi/ctheta*r];
 
 %% omega
-domega = inv(J)*(M-cross(omega,J*omega));
+domega = J\(M-cross(omega,J*omega));
     
 %% function output
 
