@@ -5,7 +5,7 @@ function utilde = dynamic_compensator(state,v)
 phi = state(7); theta = state(8); psi = state(9);
 phidot = state(10); thetadot = state(11); psidot = state(12);
 
-global m g J
+global m J
 Ix = J(1,1); Iy = J(2,2); Iz = J(3,3);
 
 T = state(13);
