@@ -8,41 +8,37 @@
 clear variables; close all; clc
 
 %% Parameters
+global Ix Iy Iz g m J c0 c1 c2 c3 REF_CASE delta delta1 mu2 mu3 mu4
 
-% quadrotor
-global Ix Iy Iz g m J o c0 c1 c2 c3 REF_CASE delta delta1 mu2 mu3 mu4
-T = 1.8;          %% (planning) period T
+T = 5; % total simulation time
+
+% quadrotor parameters
 g = 9.81;
-m = 4.34;
-Ix = 0.0820;
-Iy = 0.0845;
-Iz = 0.1377;
-o = 2*pi/T;
+% m = 4.34; % Ix = 0.0820; % Iy = 0.0845; % Iz = 0.1377;
+m = 4;
+Ix = 0.1;
+Iy = 0.1;
+Iz = 0.1;
+J = [Ix 0 0; 0 Iy 0; 0 0 Iz];
+
+% linear controller parameters: Hurwitz polynomial coefficients
+%c3 = 26;c2 = 253;c1 = 1092; c0 = 1764; % to assigns eigenvalues: -6,-6,-7,-7
+c3 = 40;c2 = 600;c1 = 4000; c0 = 10000; % to assigns eigenvalues: -10,-10,-10,-10
+
+% control barrier function parameters
 delta = 0.1;
 delta1 = 1;
 mu2 = 0.4;
 mu3 = 0;
 mu4 = 0.05;
 
-J = [Ix 0 0; 0 Iy 0; 0 0 Iz];
-
-% Hurwitz polynomial coefficients for controller
-c3 = 26;c2 = 253;c1 = 1092; c0 = 1764;
-
-%Initial condition on integrators
-% 1 = trivial, 2 = slightly different, 3 = not so much aggressive, 4 =
-% aggressive
-IC_CASE = 1;
-
-%Reference trajectory case:
+% reference trajectory:
 % 1 = hover, 2 = circumference, 3 piecewise polynomial
 REF_CASE = 1;
 
-%% Planning (simulation length from 0 to n seconds)
-
-Tspan = [0 5];
-
-%% Initial condition on integrators
+% initial conditions:
+% 1 = trivial, 2 = slightly different, 3 = not so much aggressive, 4 = aggressive
+IC_CASE = 1;
 
 switch IC_CASE
     case 1
@@ -92,10 +88,10 @@ switch IC_CASE
 end
 
 %% Run ODE
-%NO NEED to change em now
 rpy_initial = [roll_initial pitch_initial yaw_initial]';
 initialConditions = [x_initial;v_initial;rpy_initial;omega_initial;f_initial;f_dot_initial];
 
+Tspan = [0 T]; 
 options = odeset('RelTol',1e-9,'AbsTol',1e-15);
 [t,state] = ode45(@(t,state) dfl_approximated_ode(t,state),Tspan,initialConditions,options);
 

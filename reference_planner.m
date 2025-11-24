@@ -34,6 +34,8 @@ function [xd, xd_dot, xd_2dot, xd_3dot, xd_4dot, yawd, yawd_dot, yawd_2dot] = re
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % 2) CIRCUMFERENCE in the XY plane
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            T_circle = 1.8;          % period T of the sinusoid
+            o = 2*pi/T_circle;       % angular velocity
             % Position
             xd      = [cos(o*t);
                        sin(o*t);

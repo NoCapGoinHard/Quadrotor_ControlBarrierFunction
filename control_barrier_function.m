@@ -36,15 +36,21 @@ z=x-obs; z_dot=x_dot-obs_dot; z_2dot=x_2dot-obs_2dot; z_3dot=x_3dot-obs_3dot;
 
 % 3th order barrier function
 h=z'*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot);
-%h=(x-obs)'*(x-obs);
+h_dot_star=z_dot'*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)+z'*(z_dot+mu2*z_2dot+mu3*z_3dot+mu4*(v_star-obs_4dot));
 
-% if norm(z)<=delta
-%     t
-%     error('Collision has happened');
-if norm(x-obs)>delta1
-    v=v_star;
+if h<=delta
+    error(['Collision has happened at t = ', num2str(t)]);
+end
+
+% the variable test is just needed for debugging to know which control is acting
+if (h<delta1)&&(h_dot_star<=0)
+    is_CBF_active=1;
+    v = obs_4dot -(2*z_dot+mu2*z_2dot+mu3*z_3dot)/mu4 -(mu3*z_dot'*z_2dot+mu4*z_dot'*z_3dot)*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)/(mu4*h) +(eye(3)-(z*z')/(z'*z))*v_star(1:3);
 else
-    proj=(z*z')/(z'*z);
-    v = obs_4dot -(2*z_dot+mu2*z_2dot+mu3*z_3dot)/mu4 -(mu3*z_dot'*z_2dot+mu4*z_dot'*z_3dot)*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)/(mu4*h) +(eye(3)-proj)*v_star(1:3);
+    v=v_star;
+    is_CBF_active=0;
+end
 
+% just for debugging
+disp(['t = ',num2str(t),', h = ',num2str(h),', h_dot_star = ',num2str(h_dot_star),'. "Is CBF active = "',num2str(is_CBF_active)]);
 end
