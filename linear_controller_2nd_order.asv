@@ -1,0 +1,70 @@
+
+% state [x y z vx vy vz] 
+[t,state]=ode45(@(t,state) quad(t, state));
+
+function [obs, obs_dot, obs_2dot]=obstacle(t)
+obs      = [3; 0.25; 0.25];
+obs_dot  = [0; 0; 0];
+obs_2dot = [0; 0; 0];
+end
+
+function out = quad(t, state)
+global mu delta delta1 kp kd next_print_t
+x = state(1:3);
+x_dot = state(4:6);
+
+%%planning
+xd = [t; 0; 0];
+xd_dot = [1; 0; 0];
+xd_2dot = [0; 0; 0];
+
+
+%%errors
+e0 = xd - x;
+e1 = xd_dot - x_dot;
+
+u_star = xd_2dot+kp*(e0)+kd*(e1);
+
+[obs, obs_dot, obs_2dot] = obstacle(t);
+
+z = x - obs;
+z_dot = x_dot - obs_dot;
+
+h = z'*(z + mu*z_dot);
+h_dot_star = z'*(2*z_dot + mu * u_star);
+
+proj = (z*z')/(z'*z);
+u_cbf = obs_2dot + (-(2/mu) * proj * z_dot) + ((eye(3) - proj) * u_star);
+
+
+if h <= delta
+    error(['Collision has happened at t = ', num2str(t)]);
+end
+
+if (h<=delta1) && (h_dot_star<=0)
+    u = u_cbf;
+else
+    u = u_star;
+end
+
+
+%%output control law
+out=[v;u];
+
+if t >= next_print_t
+    disp(['t = ', num2str(t), ...
+        ', h = ', num2str(h), ...
+        ', h_dot_star = ', ...
+            num2str(h_dot_star), ...
+        ', check1 = ', num2str(check1), ...
+        '.']);
+    next_print_t = next_print_t + 0.01;
+end
+
+end
+
+
+
+
+
+
