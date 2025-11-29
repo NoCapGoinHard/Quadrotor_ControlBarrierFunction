@@ -23,7 +23,7 @@ obs_case = 1;
 R = 1; % radious of the circumpherence
 w = 1; % angular velocity
 
-T = 10;%2*pi/w; % simulation length
+T = 9.2;%2*pi/w; % simulation length
 
 % reference controller parameters
 eig=10;
@@ -33,9 +33,9 @@ k2 = 6*eig^2;
 k3 = 4*eig;
 
 % control barrier function (cbf) parameters
-delta1 = 0.15; % cbf activation thereshold
-delta = delta1/10; % collision thereshold
-mu=0.05;
+delta1 = 1.5; % cbf activation threshold
+delta = delta1/10; % collision threshold
+mu=0.35;
 q=8;
 mu2 = mu*q; 
 mu3 = 0;
@@ -105,7 +105,7 @@ u_star = pd_4dot + k3*(pd_3dot-p_3dot) + k2*(pd_2dot-p_2dot) + k1*(pd_dot-p_dot)
 
 % control barrier function (controller with obstacles)
 h=z'*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot);
-u_cbf = obs_4dot -(2*z_dot+mu2*z_2dot+mu3*z_3dot)/mu4 -(mu3*z_dot'*z_2dot+mu4*z_dot'*z_3dot)*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)/(mu4*h) +(eye(3)-(z*z')/(z'*z))*u_star;
+u_cbf = obs_4dot -(2*z_dot+mu2*z_2dot+mu3*z_3dot)/mu4 -(mu3*z_dot'*z_2dot+mu4*z_dot'*z_3dot)*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)/(mu4*h) + (eye(3)-(z*((z.'*z)^-1)*z.'))*u_star;
 
 % switching condition
 % The "if" statement is avoided beacuse it maked the controller discontnuous and ode45 fails.
@@ -123,6 +123,7 @@ u = coeff*u_cbf + (1-coeff)*u_star;
 % print the current relevant datas for debugging
 if t >= next_print_t
     disp(['t = ', num2str(t), ...
+        ', norm(z) = ', num2str(norm(z)), ...
         ', h = ', num2str(h), ...
         ', h_dot_star = ', num2str(h_dot_star), ...
         ', coeff = ', num2str(coeff), ...
