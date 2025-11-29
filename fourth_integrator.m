@@ -1,47 +1,49 @@
 %% November 2025
 %% Carlo Rugiero, Francesco Maria Germano, Giovanni Pio Cuoco, Matteo Trusiani
 
-%% Control Barrier Function for collision avoidance motion
-%% for an unconstrained robot modeled as a double integrator
+%% Control Barrier Function for collision avoidance during 
+%% motion for a mobile robot modeled as a fourth integrator 
+%% (quadrotor under Dynamic Feedback Linearization)
 
 clc; close all; clear variables;
 
 % parameters
-global R w obs_case mu2 mu3 mu4 delta delta1 k0 k1 k2 k3 next_print_t
+global ref_case R w obs_case mu2 mu3 mu4 delta delta1 k0 k1 k2 k3 next_print_t
 
 next_print_t = 0.01; % printing rate of the debugging string
 
 % robot initial conditions. state=[x y z vx vy vz ax ay az jx jy jz]'
 initialConditions=[0;0;0; 0;0;0; 0;0;0; 0;0;0];
 
-% obstacle trajectory.
-% obs_case=1: fixed on the point (-1,0); obs_case=2: moves on the vertical
-% line x=-1; obs_case=3: moves on a cirumpherence near (-1,0)
-obs_case = 1;
+% reference trajectory: 1 = line, 2 = circumference
+ref_case = 1;
 
-% motion parameter (planar circumpherence centered at the origin)
+% motion parameter for ref_case=2 (planar circumpherence centered at the origin)
 R = 1; % radious of the circumpherence
 w = 1; % angular velocity
 
-T = 9.2;%2*pi/w; % simulation length
+% obstacle trajectory: 1 = point, 2 = line, 3 = circumpherence/parabola
+obs_case =2;
+
+T = 20;%2*pi/w; % simulation length
 
 % reference controller parameters
-eig=10;
+eig=1;
 k0 = 1*eig^4;
 k1 = 4*eig^3;
 k2 = 6*eig^2;
 k3 = 4*eig;
 
 % control barrier function (cbf) parameters
-delta1 = 1.5; % cbf activation threshold
-delta = delta1/10; % collision threshold
-mu=0.35;
-q=8;
+delta1 = 0.1; % cbf activation thereshold
+delta = delta1/10; % collision thereshold
+mu=1;
+q=10;
 mu2 = mu*q; 
 mu3 = 0;
 mu4 = mu;
 
-% running ode
+%% running ode45
 [t,state]=ode45(@(t,state) motion_model(t, state), [0 T], initialConditions, odeset('RelTol',1e-9,'AbsTol',1e-15));
 
 % get the results
@@ -75,10 +77,8 @@ set(image(3), 'LineStyle', '--','Color', [0 0 0], 'LineWidth', 5);
 legend('y','y_d','obstacle');
 xlabel('x [m]'), ylabel('y [m]');
 title('Position: y(x) and yd(xd)');
-figure(2);
-plot(t, x);
 
-%%
+%% Motion model
 
 function state_dot = motion_model(t, state)
 
@@ -105,7 +105,7 @@ u_star = pd_4dot + k3*(pd_3dot-p_3dot) + k2*(pd_2dot-p_2dot) + k1*(pd_dot-p_dot)
 
 % control barrier function (controller with obstacles)
 h=z'*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot);
-u_cbf = obs_4dot -(2*z_dot+mu2*z_2dot+mu3*z_3dot)/mu4 -(mu3*z_dot'*z_2dot+mu4*z_dot'*z_3dot)*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)/(mu4*h) + (eye(3)-(z*((z.'*z)^-1)*z.'))*u_star;
+u_cbf = obs_4dot -(2*z_dot+mu2*z_2dot+mu3*z_3dot)/mu4 -(mu3*z_dot'*z_2dot+mu4*z_dot'*z_3dot)*(z+mu2*z_dot+mu3*z_2dot+mu4*z_3dot)/(mu4*h) +(eye(3)-(z*z')/(z'*z))*u_star;
 
 % switching condition
 % The "if" statement is avoided beacuse it maked the controller discontnuous and ode45 fails.
@@ -123,7 +123,7 @@ u = coeff*u_cbf + (1-coeff)*u_star;
 % print the current relevant datas for debugging
 if t >= next_print_t
     disp(['t = ', num2str(t), ...
-        ', norm(z) = ', num2str(norm(z)), ...
+        ', |z| = ', num2str(norm(z)), ...
         ', h = ', num2str(h), ...
         ', h_dot_star = ', num2str(h_dot_star), ...
         ', coeff = ', num2str(coeff), ...
@@ -135,17 +135,28 @@ end
 state_dot=[p_dot;p_2dot;p_3dot;u];
 end
 
+%% Reference trajectories
+
 function [pd, pd_dot, pd_2dot, pd_3dot, pd_4dot]=traj_plan(t)
 % generates a reference trajectory to follow
-global R w
-% pd      = [       R*cos(w*t);        R*sin(w*t); 0];
-% pd_dot  = [    -R*w*sin(w*t);      R*w*cos(w*t); 0];
-% pd_2dot = [-R*(w^2)*cos(w*t); -R*(w^2)*sin(w*t); 0];
-pd      = [t; 0; 0];
-pd_dot  = [1; 0; 0];
-pd_2dot = [0; 0; 0];
-pd_3dot = [0; 0; 0];
-pd_4dot = [0; 0; 0];
+global R w ref_case
+
+switch ref_case
+    case 1 % line
+        pd      = [t; 0; 0];
+        pd_dot  = [1; 0; 0];
+        pd_2dot = [0; 0; 0];
+        pd_3dot = [0; 0; 0];
+        pd_4dot = [0; 0; 0];
+    case 2 % circumpherence
+        pd      = [       R*cos(w*t);        R*sin(w*t); 0];
+        pd_dot  = [    -R*w*sin(w*t);      R*w*cos(w*t); 0];
+        pd_2dot = [-R*(w^2)*cos(w*t); -R*(w^2)*sin(w*t); 0];
+        pd_3dot = [ R*(w^3)*sin(w*t); -R*(w^3)*cos(w*t); 0];
+        pd_4dot = [ R*(w^4)*cos(w*t);  R*(w^4)*sin(w*t); 0];
+    otherwise
+        error('Please select obs_case among the available values');
+end
 end
 
 function [obs, obs_dot, obs_2dot, obs_3dot, obs_4dot]=obs_traj(t)
@@ -160,18 +171,25 @@ switch obs_case
         obs_3dot = [0; 0; 0];
         obs_4dot = [0; 0; 0];
     case 2 % line
-        obs      = [-1; pi-t; 0];
+        obs      = [10; 10-t; 0];
         obs_dot  = [0; -1; 0];
         obs_2dot = [0; 0; 0];
         obs_3dot = [0; 0; 0];
         obs_4dot = [0; 0; 0];
     case 3 % circumpherence
-        obs      = [R*(-0.9-0.3*cos(w*t)); 0.3*R*sin(w*t); 0];
-        obs_dot  = [0.3*R*w*sin(w*t);      0.3*R*w*cos(w*t); 0];
-        obs_2dot = [0.3*R*(w^2)*cos(w*t); -0.3*R*(w^2)*sin(w*t); 0];
+        % r=0.2;
+        % obs      = [R*(-0.9-r*cos(w*t)); r*R*sin(w*t); 0];
+        % obs_dot  = [r*R*w*sin(w*t);      r*R*w*cos(w*t); 0];
+        % obs_2dot = [r*R*(w^2)*cos(w*t); -r*R*(w^2)*sin(w*t); 0];
+        % obs_3dot = [-r*R*(w^3)*sin(w*t); -r*R*(w^3)*cos(w*t); 0];
+        % obs_4dot = [-r*R*(w^4)*cos(w*t); r*R*(w^4)*sin(w*t); 0];
+        obs      = [t; t^2-8*t+15; 0];
+        obs_dot  = [1; 2*t-8; 0];
+        obs_2dot = [0; 2; 0];
+        obs_3dot = [0; 0; 0];
+        obs_4dot = [0; 0; 0];
 
     otherwise
         error('Please select obs_case among the available values');
 end
-
 end
