@@ -7,15 +7,17 @@
 clc; close all; clear variables;
 
 % parameters
-global T_s var_V P_obs obs_est obs_dot_est obs_2dot_est R w mu delta delta1 kp kd traj_type obs_type next_print_t
+global T_s V P_obs obs_est obs_dot_est obs_2dot_est R w mu delta delta1 kp kd traj_type obs_type next_print_t_1 next_print_t_2
 
-next_print_t = 0.1; % printing rate of the debugging string
+% printing rate of the debugging string
+next_print_t_1 = 0.1;
+next_print_t_2 = 0.1;
 
 % robot initial conditions. state=[x y z vx vy vz]'
 initialConditions=[1.25;0.25;0;0;0;0];
 
-traj_type = 'line';     % 'line' or 'circle'
-obs_type = 'line';      % 'point' or 'line' or 'circle' or 'parabola'
+traj_type = 'circle';     % 'line' or 'circle'
+obs_type = 'circle';      % 'point' or 'line' or 'circle' or 'parabola'
 
 % motion parameter for ref_case=2 (planar circumpherence centered at the origin)
 R = 1; % radious of the circumpherence
@@ -38,10 +40,10 @@ delta = delta1/10; % collision thereshold
 mu = 0.5; % cbf gain
 
 % Kalman filter parameters
-var_V=0.001; % process noise variance
-P_obs=var_V*eye(9); %
+V=0.001*eye(9); % process noise covariance
+P_obs=V; % initial value of estimate coviariance
 obs_est=obs_traj(0); % initial value of obstacle position estimate
-obs_dot_est=[0;-1;0]; % initial value of obstacle velocity estimate
+obs_dot_est=zeros(3,1); % initial value of obstacle velocity estimate
 obs_2dot_est=zeros(3,1); % initial value of obstacle acceleration estimate
 
 %% running ode
@@ -98,13 +100,13 @@ title('Position: y(x) and yd(xd)');
 %% functions
 
 function u=controller(t,state)
-global mu delta delta1 kp kd next_print_t
+global mu delta delta1 kp kd next_print_t_2
 p = state(1:3); % robot position
 p_dot = state(4:6); % robot velocity
 
 % obstacle
 obs=obs_traj(t);
-[obs_dot, obs_2dot]=kalman(obs);
+[obs_dot, obs_2dot]=kalman(t,obs);
 
 % checks for collisions
 z = p-obs; z_dot = p_dot-obs_dot;
@@ -132,13 +134,13 @@ coeff=a*b;
 u = coeff*u_cbf + (1-coeff)*u_star;
 
 % print the current relevant datas for debugging
-if t >= next_print_t
+if t >= next_print_t_2
     disp(['t = ', num2str(t), ...
         ', h = ', num2str(h), ...
         ', h_dot_star = ', num2str(h_dot_star), ...
         ', coeff = ', num2str(coeff), ...
         '.']);
-    next_print_t = next_print_t + 0.1;
+    next_print_t_2 = next_print_t_2 + 0.1;
 end
 end
 
@@ -177,17 +179,15 @@ switch obs_type
 end
 end
 
-function [obs_dot, obs_2dot]=kalman(obs)
-global T_s P_obs var_V obs_est obs_dot_est obs_2dot_est
+function [obs_dot, obs_2dot]=kalman(t,obs)
+global T_s P_obs V obs_est obs_dot_est obs_2dot_est next_print_t_1
 
 % discrete model of the obstacle motion
-A = [eye(3) T_s.*eye(3) ((T_s^2)/2).*eye(3);
-         zeros(3) eye(3) T_s*eye(3);
-         zeros(3) zeros(3) eye(3)];
+A = [eye(3), T_s*eye(3), ((T_s^2)/2)*eye(3);
+         zeros(3), eye(3), T_s*eye(3);
+         zeros(3), zeros(3), eye(3)];
 C = [eye(3) zeros([3 6])];
 
-% noise covariances
-V=var_V*eye(9); % process noise
 W=0.01*eye(3);  % measurement noise
 
 % prediction step
@@ -197,7 +197,7 @@ Gain=P_pred*C'/(C*P_pred*C'+W); % Kalman gain
 
 % correction step
 Inn=obs-C*x_pred; % innovation
-x_corr=x_pred-Gain*Inn;
+x_corr=x_pred+Gain*Inn;
 P_obs=(eye(9)-Gain*C)*P_pred;
 
 % update variables for the next iteration
@@ -205,7 +205,12 @@ obs_est=x_corr(1:3);
 obs_dot_est=x_corr(4:6);
 obs_2dot_est=x_corr(7:9);
 
-disp(['|est_error| = ',num2str(norm(obs-obs_est))]); % for debugging
+% print prediction error for debugging
+if t >= next_print_t_1
+    disp(['|est_error| = ',num2str(norm(obs-obs_est))]);
+    next_print_t_1 = next_print_t_1 + 0.1;
+end
+
 % output of the function
 obs_dot=obs_dot_est;
 obs_2dot=obs_2dot_est;
