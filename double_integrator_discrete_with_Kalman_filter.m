@@ -123,15 +123,15 @@ u_star = pd_2dot + kd*(pd_dot-p_dot) + kp*(pd-p);
 % control barrier function (controller with obstacles)
 h = z'*(z+mu*z_dot);
 proj = (z*z')/(z'*z);
-u_cbf = obs_2dot -(2/mu)*proj*z_dot + (eye(3)-proj)*u_star;
-
 h_dot_star = z'*(2*z_dot + mu*u_star);
-a=min(exp(-100*(h-delta1)),1); % "a" is equivalent to check "h<=delta1": a=1 if h<=delta1, a=0 if h>delta1
-b=min(exp(-100*h_dot_star),1); % "b" is equivalent to check "h_dot_star<=0"
 
-% if coeff=0 then u=u_star is active, if coeff=1 then u=u_cbf
-coeff=a*b;
-u = coeff*u_cbf + (1-coeff)*u_star;
+if (h<=delta1)&&(h_dot_star<=0)
+    u = obs_2dot -(2/mu)*proj*z_dot + (eye(3)-proj)*u_star;
+    coeff=1;
+else
+    u=u_star;
+    coeff=0;
+end
 
 % print the current relevant datas for debugging
 if t >= next_print_t_2
