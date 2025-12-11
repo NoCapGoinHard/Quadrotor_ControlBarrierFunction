@@ -11,9 +11,9 @@ clc; close all; clear variables;
 global traj_type M T_s R w kp kd mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est next_print_t_2
 
 % robot initial conditions. state=[x y z v_x v_y v_z]'
-initialConditions=[1.25;0.25;0;0;0;0];
+initialConditions=[0;0;0;0;0;0];
 
-traj_type = 'circle';     % 'line' or 'circle' or 'square'
+traj_type = 'line';     % 'line' or 'circle' or 'square'
 
 M = 3; % number of obstacles
 
@@ -38,7 +38,7 @@ if strcmp(traj_type,'circle')
 elseif strcmp(traj_type,'square')
     T = 40;
 else
-    T=15;
+    T=20;
 end
 
 % reference controller parameters
@@ -126,14 +126,14 @@ xlabel('x [m]'); ylabel('y [m]');
 title('Robot trajectory with multiple obstacles');
 
 % plot minimum distance vs time
-figure(2); hold on; grid on;
-plot(t, d_min, 'b', 'LineWidth', 1.8);
-yline(delta,  'r--', 'LineWidth', 2);
-yline(delta1, 'g--', 'LineWidth', 2);
-xlabel('time [s]');
-ylabel('min distance [m]');
-legend('minimum distance', 'collision threshold \delta', 'CBF threshold \delta_1');
-title('Minimum distance to obstacles over time');
+% figure(2); hold on; grid on;
+% plot(t, d_min, 'b', 'LineWidth', 1.8);
+% yline(delta,  'r--', 'LineWidth', 2);
+% yline(delta1, 'g--', 'LineWidth', 2);
+% xlabel('time [s]');
+% ylabel('min distance [m]');
+% legend('minimum distance', 'collision threshold \delta', 'CBF threshold \delta_1');
+% title('Minimum distance to obstacles over time');
 
 %% Controller
 function u=controller(t,state)
@@ -230,13 +230,18 @@ global traj_type w R M
 obs_all     = zeros(3,M);
 switch traj_type
     case 'line'
+         % obs_all(:,3)     = [R*(6 - r*cos(w*t)); 0 + r*R*sin(w*t); 0];
+        vel=5;
+        alpha=pi/10;
+        obs_all(:,3)=[-vel*t+5*(1+vel); vel*(t-5)*tan(alpha); 0];
         % OBSTACLE 1: static
-        obs_all(:,1)     = [4; 0; 0];
+        obs_all(:,1)     = [9; 0; 0];
         % OBSTACLE 2: vertical line
-        obs_all(:,2)     = [3; pi - t; 0];
+        %obs_all(:,2)     = [3; pi - t; 0];
+        obs_all(:,2)=[t; t^2-27*t+180; 0];
         % OBSTACLE 3: circle
-        r = 0.3;
-        obs_all(:,3)     = [R*(6 - r*cos(w*t)); 0 + r*R*sin(w*t); 0];
+        % r = 0.3;
+       
     case 'circle'
         % OBSTACLE 1: static
         obs_all(:,1)     = [0; -1; 0];
