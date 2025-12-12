@@ -11,9 +11,9 @@ clc; close all; clear variables;
 global traj_type M T_s R w kp kd mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est next_print_t_2
 
 % robot initial conditions. state=[x y z v_x v_y v_z]'
-initialConditions=[0;0;0;0;0;0];
+initialConditions=[0.3;0.3;0;0;0;0];
 
-traj_type = 'line';     % 'line' or 'circle' or 'square'
+traj_type = 'square';     % 'line' or 'circle' or 'square'
 
 M = 3; % number of obstacles
 
@@ -31,14 +31,15 @@ R = 1; % radious of the circumpherence
 w = 1; % angular velocity
 
 % T_s: sampling time, T: total simulation length
-T_s=0.005; 
+T_s=0.005;
 
-if strcmp(traj_type,'circle')
-    T = 2*pi/w;
-elseif strcmp(traj_type,'square')
-    T = 40;
-else
-    T=20;
+switch traj_type
+    case 'line'
+        T=20;
+    case 'circle'
+        T = 2*pi/w;
+    case 'square'
+        T = 40;
 end
 
 % reference controller parameters
@@ -55,7 +56,7 @@ V=0.001*eye(9*M); % process noise covariance
 P_obs=V; % initial value of estimate coviariance
 obs_est=zeros(3*M,1); % initial value of obstacle position estimate
 for i=1:M
-obs_est(3*i-2:3*i)=obs0(:,i); 
+    obs_est(3*i-2:3*i)=obs0(:,i);
 end
 obs_dot_est=zeros(3*M,1); % initial value of obstacle velocity estimate
 obs_2dot_est=zeros(3*M,1); % initial value of obstacle acceleration estimate
@@ -81,6 +82,7 @@ for i=steps
     state_current=state(end,:)';
     t_current=t(end);
 end
+animations(t,state,M);
 
 %% get the results
 x = state(:,1);
@@ -93,37 +95,88 @@ d_min  = zeros(length(t),1);
 
 % compute reference and obstacles trajectories
 for i = 1:length(t)
-
-    % reference
     [pd, ~, ~] = traj_plan(t(i));
     xd(i) = pd(1);
     yd(i) = pd(2);
-
-    % obstacles
     obs_all = obs_traj_multi(t(i));
-
     dist2 = zeros(1,M);
-
     for j = 1:M
         xobs(i,j) = obs_all(1,j); % the x-coordinate of obstacle j at time t(i)
         yobs(i,j) = obs_all(2,j); % the y-coordinate of obstacle j at time t(i)
         dist2(j)  = (state(i,1) - obs_all(1,j))^2 + (state(i,2) - obs_all(2,j))^2; % squared Euclidean distance = (x_robot - x_obstacle)^2 + (y_robot - y_obstacle)^2
     end
-
     % minimum distance
     d_min(i) = sqrt(min(dist2));
 end
 
-% plot robot and obstacles trajectories
-figure(1); hold on; grid on; axis equal;
-plot(x, y, 'Color', [0 0 0.55], 'LineWidth', 1.8);
-plot(xd, yd, '--', 'Color', [1 0.4 0.2], 'LineWidth', 1.5);
-for j = 1:M
-    plot(xobs(:,j), yobs(:,j), '--','Color',[0 0 0], 'LineWidth', 2);
+% plot robot and obstacles paths (no time)
+% figure(1); hold on; grid on; axis equal;
+% plot(x, y, 'Color', [0 0 0.55], 'LineWidth', 1.8);
+% plot(xd, yd, '--', 'Color', [1 0.4 0.2], 'LineWidth', 1.5);
+% for j = 1:M
+%     plot(xobs(:,j), yobs(:,j), '--','Color',[0 0 0], 'LineWidth', 2);
+% end
+% legend('Robot', 'Reference', 'Obstacles');
+% xlabel('x [m]'); ylabel('y [m]');
+% title('Robot trajectory with multiple obstacles');
+
+% plot robot and obstacles trajectories (with time)
+switch traj_type
+    case 'line'
+        x_limit = [-1 21];
+        y_limit = [-1 21];
+        step_size = 1000;
+    case 'circle'
+        x_limit = [-2 2];
+        y_limit = [-2 2];
+        step_size = 100;
+    case 'square'
+       x_limit = [-5 15];
+       y_limit = [-15 5];
+       step_size = 1000;
 end
-legend('Robot', 'Reference', 'Obstacles');
+num_loops = 2;
+tail_length = 100;
+N = length(t);
+indices = 1:step_size:N;
+
+figure(1); hold on; grid on; axis equal;
 xlabel('x [m]'); ylabel('y [m]');
-title('Robot trajectory with multiple obstacles');
+title('Robot Trajectory with Multiple Dynamic Obstacles');
+axis([x_limit(1), x_limit(2), y_limit(1), y_limit(2)]); 
+h_ref_line = plot(xd, yd, '--', 'Color', [1 0.4 0.2], 'LineWidth', 1.5);
+h_desired_marker = plot(xd(1), yd(1), 'd', 'MarkerSize', 8, 'MarkerFaceColor', [1 0 0], 'MarkerEdgeColor', [1 0 0]);
+h_robot_path = plot(x(1), y(1), 'Color', [0 0 0.55], 'LineWidth', 1.8);
+h_obs_marker = zeros(M, 1);
+for j = 1:M
+h_obs_marker(j) = plot(xobs(1,j), yobs(1,j), 's', 'MarkerSize', 8, 'MarkerFaceColor', [0 0 0], 'MarkerEdgeColor', [0 0 0]);
+end
+h_robot_marker = plot(x(1), y(1), 'o', 'MarkerSize', 8, 'MarkerFaceColor', [0 0 0.55], 'MarkerEdgeColor', [0 0 0.55]);
+h_time = text(x(1), y(1) + 0.2, ['t = ' num2str(t(1), '%.2f') ' s'], 'FontSize', 10);
+legend([h_robot_marker, h_robot_path, h_ref_line, h_desired_marker, h_obs_marker(1)], ...
+'Robot Position', 'Robot Path', 'Reference Line', 'Desired Position', 'Obstacles', ...
+'Location', 'best');
+for loop_count = 1:num_loops
+t_prev = t(1);
+set(h_robot_path, 'XData', x(1), 'YData', y(1));
+for idx = indices(2:end)
+start_idx = max(1, idx - tail_length); 
+dt = t(idx) - t_prev;
+set(h_robot_path, 'XData', x(start_idx:idx), 'YData', y(start_idx:idx));
+set(h_desired_marker, 'XData', xd(idx), 'YData', yd(idx));
+set(h_robot_marker, 'XData', x(idx), 'YData', y(idx));
+for j = 1:M
+set(h_obs_marker(j), 'XData', xobs(idx, j), 'YData', yobs(idx, j));
+end
+set(h_time, 'String', ['t = ' num2str(t(idx), '%.2f') ' s']);
+set(h_time, 'Position', [x(idx), y(idx) + 0.2]);
+drawnow;
+pause(dt);
+t_prev = t(idx);
+end
+pause(0.5); 
+end
+hold off;
 
 % plot minimum distance vs time
 % figure(2); hold on; grid on;
@@ -134,6 +187,13 @@ title('Robot trajectory with multiple obstacles');
 % ylabel('min distance [m]');
 % legend('minimum distance', 'collision threshold \delta', 'CBF threshold \delta_1');
 % title('Minimum distance to obstacles over time');
+
+
+
+
+
+
+
 
 %% Controller
 function u=controller(t,state)
@@ -218,7 +278,7 @@ switch traj_type
         elseif t<=40
             pd      = [0; -40+t; 0]; pd_dot  = [0; 1; 0]; pd_2dot = [0; 0; 0];
         end
-   otherwise
+    otherwise
         error('Please select ref_type among the available values');
 end
 end
@@ -230,18 +290,14 @@ global traj_type w R M
 obs_all     = zeros(3,M);
 switch traj_type
     case 'line'
-         % obs_all(:,3)     = [R*(6 - r*cos(w*t)); 0 + r*R*sin(w*t); 0];
+        % OBSTACLE 1: line
         vel=5;
         alpha=pi/10;
-        obs_all(:,3)=[-vel*t+5*(1+vel); vel*(t-5)*tan(alpha); 0];
-        % OBSTACLE 1: static
-        obs_all(:,1)     = [9; 0; 0];
-        % OBSTACLE 2: vertical line
-        %obs_all(:,2)     = [3; pi - t; 0];
+        obs_all(:,1)=[-vel*t+5*(1+vel); vel*(t-5)*tan(alpha); 0];
+        % OBSTACLE 2: static
+        obs_all(:,2)     = [9; 0; 0];
+        % OBSTACLE 3: parabola
         obs_all(:,2)=[t; t^2-27*t+180; 0];
-        % OBSTACLE 3: circle
-        % r = 0.3;
-       
     case 'circle'
         % OBSTACLE 1: static
         obs_all(:,1)     = [0; -1; 0];
@@ -281,7 +337,7 @@ Gain=P_pred*C'/(C*P_pred*C'+W); % Kalman gain
 % correction step
 obs_vector=zeros(3*M,1);
 for i=1:M
-obs_vector(3*i-2:3*i)=obs(:,i); 
+    obs_vector(3*i-2:3*i)=obs(:,i);
 end
 Inn=obs_vector-C*x_pred; % innovation
 x_corr=x_pred+Gain*Inn;
@@ -296,8 +352,8 @@ obs_dot=zeros(3,M);
 obs_2dot=zeros(3,M);
 % output of the function
 for i=1:M
-obs_dot(:,i)=obs_dot_est(3*i-2:3*i,1);
-obs_2dot(:,i)=obs_2dot_est(3*i-2:3*i,1);
+    obs_dot(:,i)=obs_dot_est(3*i-2:3*i,1);
+    obs_2dot(:,i)=obs_2dot_est(3*i-2:3*i,1);
 end
 
 end
