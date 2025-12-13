@@ -8,19 +8,15 @@
 clc; close all; clear variables;
 
 %% parameters
-global traj_type M T_s R w kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
+global obs_type M T_s kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
 
 % robot initial conditions. state=[x y z v_x v_y v_z]'
 initialConditions=[0.3;0.3;0;0;0;0];
 
-traj_type = 'line';     % 'line' or 'circle' or 'square'
-
-M = 3; % number of obstacles
-
-R = 1; % radious of the circumpherence
-w = 1; % angular velocity
-
 T_s=0.005; % sampling time
+T=10; % total simulation length
+M=1;
+obs_type = 'parabola'; % 'parabola' or 'point' or 'vert_line' or 'hor_line'
 
 % reference controller parameters
 kp = 100; % proportional gain
@@ -33,17 +29,13 @@ delta = delta1/10; % collision thereshold
 mu = 0.5; % cbf gain
 
 % Kalman filter parameters
-V=0.001*eye(15*M); % process noise covariance
+V=0.001*eye(15); % process noise covariance
 P_obs=V; % initial value of estimate coviariance
-obs_est=zeros(3*M,1); % initial value of obstacle position estimate
-obs0 = obs_traj_multi(0);
-for i=1:M
-    obs_est(3*i-2:3*i)=obs0(:,i);
-end
-obs_dot_est=zeros(3*M,1); % initial value of obstacle velocity estimate
-obs_2dot_est=zeros(3*M,1); % initial value of obstacle acceleration estimate
-obs_3dot_est=zeros(3*M,1); % initial value of obstacle acceleration estimate
-obs_4dot_est=zeros(3*M,1); % initial value of obstacle acceleration estimate
+obs_est=obs_traj(0); % initial value of obstacle position estimate
+obs_dot_est=zeros(3,1); % initial value of obstacle velocity estimate
+obs_2dot_est=zeros(3,1); % initial value of obstacle acceleration estimate
+obs_3dot_est=zeros(3,1); % initial value of obstacle acceleration estimate
+obs_4dot_est=zeros(3,1); % initial value of obstacle acceleration estimate
 
 % printing rate of the debugging string
 next_print_t = 0;
@@ -55,18 +47,6 @@ next_print_t = 0;
 selection_animations=[10;0;0];
 
 %% running ode
-
-% total simulation length
-switch traj_type
-    case 'line'
-        T=20;
-    case 'circle'
-        T = 2*pi/w;
-    case 'square'
-        T = 40;
-    otherwise
-        error('Please select traj_type among the available values');
-end
 
 state_current = initialConditions;
 t_current = 0;
@@ -91,28 +71,19 @@ x = state(:,1);
 y = state(:,2);
 xd   = zeros(length(t),1);
 yd   = zeros(length(t),1);
-xobs = zeros(length(t),M);
-yobs = zeros(length(t),M);
-d_min  = zeros(length(t),1);
+xobs = zeros(length(t),1);
+yobs = zeros(length(t),1);
 
 % compute reference and obstacles trajectories
 for i = 1:length(t)
-    [pd,~,~,~,~] = traj_plan(t(i));
-    xd(i) = pd(1);
-    yd(i) = pd(2);
-    obs_all = obs_traj_multi(t(i));
-    dist2 = zeros(1,M);
-    for j = 1:M
-        xobs(i,j) = obs_all(1,j); % the x-coordinate of obstacle j at time t(i)
-        yobs(i,j) = obs_all(2,j); % the y-coordinate of obstacle j at time t(i)
-        dist2(j)  = (state(i,1) - obs_all(1,j))^2 + (state(i,2) - obs_all(2,j))^2; % squared Euclidean distance = (x_robot - x_obstacle)^2 + (y_robot - y_obstacle)^2
-    end
-    % minimum distance
-    d_min(i) = sqrt(min(dist2));
+    xd(i) = t(i);
+    yd(i) = 0;
+    obs = obs_traj(t(i));
+    xobs(i)=obs(1);
+    yobs(i)=obs(2);
 end
 
 animations(t,x,y,xd,yd,xobs,yobs,selection_animations);
-
 
 
 
@@ -125,27 +96,12 @@ p = state(1:3); % robot position
 p_dot = state(4:6); % robot velocity
 
 % obstacle
-obs_all=obs_traj_multi(t);
-[obs_dot_all, obs_2dot_all,~,~]=kalman(obs_all);
-
-% compute relative vectors and distances
-z_all     = zeros(3,M);
-z_dot_all = zeros(3,M);
-dist2     = zeros(1,M);
-
-for i = 1:M
-    z_all(:,i)     = p     - obs_all(:,i);
-    z_dot_all(:,i) = p_dot - obs_dot_all(:,i);
-    dist2(i)       = z_all(:,i)'*z_all(:,i); % = ||p - p_obs,i||^2
-end
-
-% select the closest obstacle
-[~, i_star] = min(dist2);
-z     = z_all(:,i_star);   % z = p-p_obs,i
+obs=obs_traj(t);
+[obs_dot, obs_2dot,~,~]=kalman(obs);
+z = p-obs;
 switch cbf_type
     case 'dynamic'
-        z_dot = z_dot_all(:,i_star);
-        obs_2dot = obs_2dot_all(:,i_star);
+        z_dot = p_dot-obs_dot;
     case 'static'
         z_dot = p_dot;
         obs_2dot = zeros(3,1);
@@ -153,14 +109,15 @@ switch cbf_type
         error('Please select cbf_type among the available values');
 end
 
-
 % checks for collisions
 if norm(z)<=delta
     error(['Collision has happened at t = ', num2str(t)]);
 end
 
 % trajectory planning
-[pd, pd_dot, pd_2dot,~,~]=traj_plan(t);
+ pd      = [t; 0; 0]; 
+ pd_dot  = [1; 0; 0]; 
+ pd_2dot = [0; 0; 0];
 
 % trajectory tracking controller (reference controller in absence of obstacles)
 u_star = pd_2dot + kd*(pd_dot-p_dot) + kp*(pd-p);
@@ -189,3 +146,22 @@ if t >= next_print_t
 end
 end
 
+%% Obstacle
+function obs=obs_traj(t)
+global obs_type
+
+switch obs_type
+    case 'hor_line'
+        vel=1;
+        obs=[-vel*t+5*(1+vel); 0; 0];
+    case 'vert_line'
+        vel=1;
+        obs=[5; vel*(-t+5); 0];
+    case 'point'
+        obs=[5; 0; 0];
+    case 'parabola'
+        obs=[t; (t-3)*(t-7); 0];
+    otherwise
+        error('Please select obs_type among the available values');
+end
+end
