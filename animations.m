@@ -6,11 +6,11 @@ switch traj_type
         x_limit = [-1 21];
         y_limit = [-10 10];
     case 'circle'
-        x_limit = [-2 2];
-        y_limit = [-2 2];
+        x_limit = [-7 7];
+        y_limit = [-7 7];
     case 'square'
-        x_limit = [-5 15];
-        y_limit = [-15 5];
+        x_limit = [-10 10];
+        y_limit = [-10 10];
     otherwise
         error('Please select traj_type among the available values');
 end

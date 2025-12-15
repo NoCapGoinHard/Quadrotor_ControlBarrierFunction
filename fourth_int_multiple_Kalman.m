@@ -8,39 +8,42 @@
 clc; close all; clear variables;
 
 %% parameters
-global traj_type M T_s R w k0 k1 k2 k3 mu2 mu3 mu4 delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
-
-% robot initial conditions. state=[x y z  v_x v_y v_z  a_x a_y a_z  j_x j_y j_z]'
-initialConditions=[0.3;0.3;0; 0;0;0; 0;0;0; 0;0;0];
+global traj_type M T_s k0 k1 k2 k3 mu2 mu3 mu4 delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
 
 traj_type = 'line';     % 'line' or 'circle' or 'square'
 
-M = 3; % number of obstacles
+% robot initial conditions. state=[x y z v_x v_y v_z]'
+switch traj_type
+    case 'line'
+        initialConditions=[0;0;0; 0;0;0; 0;0;0; 0;0;0];
+        T=20;
+    case 'circle'
+        initialConditions=[6;0;1; 0;0;0; 0;0;0; 0;0;0];
+        T = 2*pi;
+    case 'square'
+        initialConditions=[-4.7;4.7;0.3; 0;0;0; 0;0;0; 0;0;0];
+        T = 40;
+    otherwise
+        error('Please select traj_type among the available values');
+end
 
-R = 1; % radious of the circumpherence
-w = 1; % angular velocity
+M = 3; % number of obstacles
 
 T_s=0.005; % sampling time
 
 % reference controller parameters
-if strcmp(traj_type,'circle')
-    eig=1;
-else
-    eig=10;
-end
+eig=7.5;
 k0 = 1*eig^4;
 k1 = 4*eig^3;
 k2 = 6*eig^2;
 k3 = 4*eig;
 
 % control barrier function (cbf) parameters
-delta1 = 0.1; % cbf activation thereshold
+delta1 = 0.2; % cbf activation thereshold
 delta = delta1/10; % collision thereshold
-mu=1;
-q=10;
-mu2 = mu*q; 
-mu3 = 0;
-mu4 = mu;
+mu2 =10; % 0.05
+mu3 = 0.01*mu2;
+mu4 = 0.1*mu2;
 
 % Kalman filter parameters
 V=0.001*eye(15*M); % process noise covariance
@@ -62,21 +65,11 @@ next_print_t = 0;
 % selection_vector(1)/=0 plots trajectories (with time)
 % selection_vector(2)/=0 plots paths (no time)
 % selection_vector(3)/=0 plots minimum distance
-selection_vector=[0;10;0];
+selection_vector=[10;0;0];
 
 %% running ode
 
-% total simulation length
-switch traj_type
-    case 'line'
-        T=20;
-    case 'circle'
-        T = 2*pi/w;
-    case 'square'
-        T = 40;
-    otherwise
-        error('Please select traj_type among the available values');
-end
+
 
 state_current = initialConditions;
 t_current = 0;

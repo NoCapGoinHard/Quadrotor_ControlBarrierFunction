@@ -11,20 +11,20 @@ clc; close all; clear variables;
 global obs_type M T_s kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
 
 % robot initial conditions. state=[x y z v_x v_y v_z]'
-initialConditions=[0.3;0.3;0;0;0;0];
+initialConditions=[0;0;0; 0;0;0];
 
 T_s=0.005; % sampling time
 T=10; % total simulation length
 M=1;
-obs_type = 'parabola'; % 'parabola' or 'point' or 'vert_line' or 'hor_line'
+obs_type = 'hor_line'; % 'point' or 'vert_line' or 'hor_line' or 'parabola'
 
 % reference controller parameters
-kp = 100; % proportional gain
-kd = 20; % derivative gain
+kp = 25; % proportional gain
+kd = 10; % derivative gain
 
 % control barrier function (cbf) parameters
-cbf_type = 'dynamic'; % 'static' or 'dynamic'
-delta1 = 0.15; % cbf activation thereshold
+cbf_type = 'static'; % 'static' or 'dynamic'
+delta1 = 0.2; % cbf activation thereshold
 delta = delta1/10; % collision thereshold
 mu = 0.5; % cbf gain
 
@@ -91,7 +91,7 @@ animations(t,x,y,xd,yd,xobs,yobs,selection_animations);
 
 %% Controller
 function u=controller(t,state)
-global cbf_type mu delta delta1 kp kd next_print_t M
+global cbf_type mu delta delta1 kp kd next_print_t
 p = state(1:3); % robot position
 p_dot = state(4:6); % robot velocity
 

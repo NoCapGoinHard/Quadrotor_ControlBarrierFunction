@@ -8,27 +8,36 @@
 clc; close all; clear variables;
 
 %% parameters
-global traj_type M T_s R w kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
-
-% robot initial conditions. state=[x y z v_x v_y v_z]'
-initialConditions=[0.3;0.3;0;0;0;0];
+global traj_type M T_s kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
 
 traj_type = 'line';     % 'line' or 'circle' or 'square'
 
-M = 3; % number of obstacles
+% robot initial conditions. state=[x y z v_x v_y v_z]'
+switch traj_type
+    case 'line'
+        initialConditions=[0;0;0;0;0;0];
+        T=20;
+    case 'circle'
+        initialConditions=[6;0;1;0;0;0];
+        T=2*pi;
+    case 'square'
+        initialConditions=[-4.7;4.7;0.3;0;0;0];
+        T=40;
+    otherwise
+        error('Please select traj_type among the available values');
+end
 
-R = 1; % radious of the circumpherence
-w = 1; % angular velocity
+M = 3; % number of obstacles
 
 T_s=0.005; % sampling time
 
 % reference controller parameters
-kp = 100; % proportional gain
-kd = 20; % derivative gain
+kp = 25; % proportional gain
+kd = 10; % derivative gain
 
 % control barrier function (cbf) parameters
-cbf_type = 'dynamic'; % 'static' or 'dynamic'
-delta1 = 0.15; % cbf activation thereshold
+cbf_type = 'static'; % 'static' or 'dynamic'
+delta1 = 0.2; % cbf activation thereshold
 delta = delta1/10; % collision thereshold
 mu = 0.5; % cbf gain
 
@@ -55,18 +64,6 @@ next_print_t = 0;
 selection_animations=[10;0;0];
 
 %% running ode
-
-% total simulation length
-switch traj_type
-    case 'line'
-        T=20;
-    case 'circle'
-        T = 2*pi/w;
-    case 'square'
-        T = 40;
-    otherwise
-        error('Please select traj_type among the available values');
-end
 
 state_current = initialConditions;
 t_current = 0;
