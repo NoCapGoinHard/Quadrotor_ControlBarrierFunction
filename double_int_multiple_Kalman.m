@@ -61,7 +61,7 @@ next_print_t = 0;
 % selection_animations(1)/=0 plots trajectories (with time)
 % selection_animations(2)/=0 plots paths (no time)
 % selection_animations(3)/=0 plots minimum distance
-selection_animations=[10;0;0];
+selection_animations=[0;10;10];
 
 %% running ode
 
@@ -108,7 +108,7 @@ for i = 1:length(t)
     d_min(i) = sqrt(min(dist2));
 end
 
-animations(t,x,y,xd,yd,xobs,yobs,selection_animations);
+animations(t,x,y,xd,yd,xobs,yobs,d_min,selection_animations);
 
 
 

@@ -83,7 +83,7 @@ for i = 1:length(t)
     yobs(i)=obs(2);
 end
 
-animations(t,x,y,xd,yd,xobs,yobs,selection_animations);
+animations(t,x,y,xd,yd,xobs,yobs,d_min,selection_animations);
 
 
 

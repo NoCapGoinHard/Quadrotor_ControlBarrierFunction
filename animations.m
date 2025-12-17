@@ -1,10 +1,10 @@
-function animations(t,x,y,xd,yd,xobs,yobs,selection_vector)
-global traj_type M
+function animations(t,x,y,xd,yd,xobs,yobs,d_min,selection_vector)
+global traj_type M delta1 delta
 
 switch traj_type
     case 'line'
         x_limit = [-1 21];
-        y_limit = [-10 10];
+        y_limit = [-5 5];
     case 'circle'
         x_limit = [-7 7];
         y_limit = [-7 7];
@@ -75,6 +75,8 @@ if selection_vector(2)~=0
     xlabel('x [m]'); ylabel('y [m]');
     title('Robot path with multiple obstacles');
     axis([x_limit(1), x_limit(2), y_limit(1), y_limit(2)]);
+    %plot(0, -5, 'ko', 'MarkerFaceColor', 'k', 'HandleVisibility', 'off')
+    %plot(9, 0, 'ko', 'MarkerFaceColor', 'k', 'HandleVisibility', 'off')
 end
 
 %% plot minimum distance
