@@ -8,15 +8,15 @@
 clc; close all; clear variables;
 
 %% parameters
-global obs_type M T_s kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
+global traj_type obs_type M T_s kp kd cbf_type mu delta delta1 V P_obs obs_est obs_dot_est obs_2dot_est obs_3dot_est obs_4dot_est next_print_t
 
 % robot initial conditions. state=[x y z v_x v_y v_z]'
 initialConditions=[0;0;0; 0;0;0];
 
 T_s=0.005; % sampling time
-T=10; % total simulation length
+T=5.14; % total simulation length
 M=1;
-obs_type = 'hor_line'; % 'point' or 'vert_line' or 'hor_line' or 'parabola'
+obs_type = 'vert_line'; % 'point' or 'vert_line' or 'hor_line' or 'parabola'
 
 % reference controller parameters
 kp = 25; % proportional gain
@@ -44,7 +44,7 @@ next_print_t = 0;
 % selection_animations(1)/=0 plots trajectories (with time)
 % selection_animations(2)/=0 plots paths (no time)
 % selection_animations(3)/=0 plots minimum distance
-selection_animations=[10;0;0];
+selection_animations=[0;1;0];
 
 %% running ode
 
@@ -83,7 +83,8 @@ for i = 1:length(t)
     yobs(i)=obs(2);
 end
 
-animations(t,x,y,xd,yd,xobs,yobs,d_min,selection_animations);
+traj_type='comparison';
+animations(t,x,y,xd,yd,xobs,yobs,[],selection_animations);
 
 
 

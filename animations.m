@@ -11,6 +11,9 @@ switch traj_type
     case 'square'
         x_limit = [-10 10];
         y_limit = [-10 10];
+    case 'comparison'
+        x_limit = [-1 11];
+        y_limit = [-5 5];
     otherwise
         error('Please select traj_type among the available values');
 end
@@ -75,8 +78,7 @@ if selection_vector(2)~=0
     xlabel('x [m]'); ylabel('y [m]');
     title('Robot path with multiple obstacles');
     axis([x_limit(1), x_limit(2), y_limit(1), y_limit(2)]);
-    %plot(0, -5, 'ko', 'MarkerFaceColor', 'k', 'HandleVisibility', 'off')
-    %plot(9, 0, 'ko', 'MarkerFaceColor', 'k', 'HandleVisibility', 'off')
+    %plot(5, 0, 'ko', 'MarkerFaceColor', 'k', 'HandleVisibility', 'off')
 end
 
 %% plot minimum distance
