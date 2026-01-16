@@ -1,0 +1,5 @@
+import numpy as np
+
+t = np.arange(0,  10, 1)   
+
+print(t[0:0+2])
